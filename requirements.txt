@@ -1,0 +1,9 @@
+openai
+pymodi-plus
+requests
+tensorflow
+numpy
+opencv-python
+pyaudio
+Pillow
+pydub
