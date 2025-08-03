@@ -1,23 +1,16 @@
-from openai import OpenAI
 import os
 import modi_plus
 import requests
 import time
 from road import find_optimal_path
-from dl import predict_image
 import struct
 from pydub import AudioSegment
 import io
 import pyaudio
-import numpy as np
-import cv2
 from datetime import datetime
 import math
-import tensorflow as tf
 from pathlib import Path
 
-client = OpenAI(api_key=os.environ.get("OPENAI_KEY"))
-best_model = tf.keras.models.load_model('./best_model.h5')
 map_size = 7
 map_data = [
     [1,1,2,1,1,2,1],
@@ -50,168 +43,6 @@ display = bundle.displays[0]
 speaker = bundle.speakers[0]
 speaker2 = bundle.speakers[1]
 
-# dir = os.path.join(os.path.dirname(__file__), "example_wavs")
-# example_wav = "example.wav"
-# api_url = "http://127.0.0.1:9880/tts"
-
-messages = [
-    {"role": "system", "content": "당신은 지진이 멈추기 전에 사람들에게 행동 요령을 알려주는 인공지능입니다. TTS로 사람들에게 메세지가 전달될것이기 때문에 이모지는 사용하지 마세요. 너무 많은 정보를 제공하려하지 마세요. 또한 당신이 메세지를 받는다는것은 이미 지진이 발생했다는 이야기 입니다. 현재 지진이 발생했으니~~하세요 와 같은 식으로 시작하세요."},
-]
-
-class Camera:
-    def __init__(self, camera_index=1):
-        self.cap = cv2.VideoCapture(camera_index)
-        if not self.cap.isOpened():
-            raise Exception("카메라를 열 수 없습니다!")
-        # 카메라가 안정화될 때까지 잠시 대기
-        time.sleep(1)
-    
-    def capture_photo(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            print("사진을 찍을 수 없습니다!")
-            return None
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"photo_{timestamp}.jpg"
-        cv2.imwrite(filename, frame)
-        print(f"사진이 저장되었습니다: {filename}")
-        return filename
-    
-    def release(self):
-        self.cap.release()
-        cv2.destroyAllWindows()
-print("카메라 로드중")
-camera = Camera()
-print("카메라 로드 완료")
-# def request_tts(text: str):
-#     payload = {
-#         "text": text,
-#         "text_lang": "ko",
-#         "ref_audio_path": f"{dir}\\{example_wav}",
-#         "aux_ref_audio_path": [f"{dir}\\example_wavs\\{i}_audio.wav" for i in range(11)],
-#         "prompt_text": "",
-#         "prompt_lang": "ko",
-#         "text_split_method": "cut5",
-#         "batch_size": 1,
-#         "media_type": "wav",
-#         "streaming_mode": "true"
-#     }
-#     try:
-#         response = requests.get(api_url, params=payload, stream=True)
-#         response.raise_for_status()
-#         audio_data = b""
-#         for chunk in response.iter_content(chunk_size=8192):
-#             if chunk:
-#                 audio_data += chunk
-#         if len(audio_data) < 44:
-#             raise ValueError("오디오 데이터가 유효하지 않음")
-#         total_size = len(audio_data)
-#         data_size = total_size - 44
-#         audio_data = (
-#             audio_data[:4] + struct.pack('<I', total_size - 8) +
-#             audio_data[8:40] + struct.pack('<I', data_size) + audio_data[44:]
-#         )
-#         header = audio_data[:44]
-#         audio_format, num_channels, sample_rate, byte_rate, block_align, bits_per_sample = struct.unpack('<HHIIHH', header[20:36])
-#         audio_bytes = audio_data[44:44+data_size]
-#         return (audio_bytes, sample_rate, num_channels, bits_per_sample)
-#     except Exception as e:
-#         print(f"TTS 요청 실패: {e}")
-#         return None
-
-# def play_tts_audio(audio_bytes, sample_rate, num_channels, bits_per_sample):
-#     """
-#     TTS 오디오를 컴퓨터 스피커로 재생하는 함수
-#     """
-#     try:
-#         # PyAudio 초기화
-#         p = pyaudio.PyAudio()
-        
-#         # 오디오 데이터를 numpy 배열로 변환
-#         if bits_per_sample == 16:
-#             audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-#         elif bits_per_sample == 8:
-#             audio_array = np.frombuffer(audio_bytes, dtype=np.uint8)
-#         else:
-#             # 32비트 float로 가정
-#             audio_array = np.frombuffer(audio_bytes, dtype=np.float32)
-        
-#         # 스트림 열기
-#         stream = p.open(
-#             format=pyaudio.paInt16 if bits_per_sample == 16 else pyaudio.paFloat32,
-#             channels=num_channels,
-#             rate=sample_rate,
-#             output=True
-#         )
-        
-#         # 오디오 재생
-#         stream.write(audio_bytes)
-        
-#         # 스트림 정리
-#         stream.stop_stream()
-#         stream.close()
-#         p.terminate()
-        
-#         print("TTS 오디오 재생 완료")
-        
-#     except Exception as e:
-#         print(f"오디오 재생 실패: {e}")
-
-# def speak_text(text: str):
-#     """
-#     텍스트를 TTS로 변환하고 컴퓨터 스피커로 출력하는 함수
-#     """
-#     print(f"TTS 요청: {text}")
-    
-#     # TTS 요청
-#     result = request_tts(text)
-    
-#     if result is not None:
-#         audio_bytes, sample_rate, num_channels, bits_per_sample = result
-#         print(f"오디오 정보 - 샘플레이트: {sample_rate}, 채널: {num_channels}, 비트: {bits_per_sample}")
-        
-#         # 컴퓨터 스피커로 재생
-#         play_tts_audio(audio_bytes, sample_rate, num_channels, bits_per_sample)
-#     else:
-#         print("TTS 변환 실패")
-
-def tts(text):
-    speech_file_path = Path(__file__).parent / "speech.mp3"
-    with client.audio.speech.with_streaming_response.create(
-        model="gpt-4o-mini-tts",
-        voice="coral",
-        input=text,
-        instructions="단호한 목소리로 말하세요.",
-    ) as response:
-        response.stream_to_file(speech_file_path)
-    audio = AudioSegment.from_mp3("speech.mp3")
-
-    # WAV 데이터를 메모리에 저장
-    wav_io = io.BytesIO()
-    audio.export(wav_io, format="wav")
-    wav_io.seek(0)
-
-    # PyAudio 초기화
-    p = pyaudio.PyAudio()
-
-    # 오디오 스트림 열기
-    stream = p.open(format=pyaudio.paInt16,
-                    channels=1,
-                    rate=audio.frame_rate,
-                    output=True,
-                    frames_per_buffer=1024)
-
-    # WAV 데이터를 스트리밍하여 출력
-    chunk_size = 1024
-    while chunk := wav_io.read(chunk_size):
-        stream.write(chunk)
-
-    # 스트림 종료
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-
 def gamji_earth_quake(gamji_second, before_gamjied):
     global map_data, map_size
     if imu.acceleration_z > -47 or imu.acceleration_z < -51:
@@ -231,28 +62,6 @@ def gamji_earth_quake(gamji_second, before_gamjied):
                 gamji_earth_quake(gamji_second - 1, before_gamjied)
             else:
                 earth_quake(map_data, map_size, before_gamjied = True)
-
-# 지진이 났을때 경보를 출력함
-def streaming_chat(messages):
-    response = client.chat.completions.create(
-        model="gpt-4.1-nano",
-        messages=messages,
-        stream=True
-    )
-    result = ""
-    for chunk in response:
-        if chunk.choices[0].delta.content is not None:
-            content = chunk.choices[0].delta.content
-            result += content
-            # display.write_text(result)
-            print(content, end="", flush=True)
-    lines = result.splitlines()
-    # for text in lines:
-    #     speak_text(text)
-    tts(result)
-
-    print("\n")
-    return result
 
 def angleunji(): # 각도 정상화(0~359도), 180도랑 360도 없음
     angle = imu.angle_z
@@ -404,6 +213,7 @@ def bbi_bbo(bi):
         bbi()
         return True
 
+
 # 우옹이를 움직이는 능력
 def move(direction, current_direction, now_num):
     global bibi
@@ -521,16 +331,15 @@ def navigate_through_map(path_map):
                         pic_path = "./image/no.png"
                     elif name == "광교 테크노벨리":
                         pic_path = "./image/no.png"
-                    result = predict_image(best_model, pic_path)
-                    print(result)
-                    if result == 'collapsed':
+                    print('')
+                    if 'a' == 'collapsed':
                         alert_oneonenine(name)
                     break
 
             direction = calculate_direction(current_pos, target_pos)
             if direction is not None:
                 print(f"방향: {direction}도로 이동")
-                move(direction, current_direction, target_number)
+                move(direction, current_direction, target_number    )
                 current_direction = direction
                 # distance = math.sqrt((start[0] - target_pos[0])**2 + (start[1] - target_pos[1])**2)
                 delta_x = (start[0] - target_pos[0])
@@ -568,11 +377,7 @@ def navigate_through_map(path_map):
         time.sleep(0.5)
 
 def earth_quake(map_data, map_size, before_gamjied):
-    global messages
     if before_gamjied == False:
-        messages.append({"role": "user", "content": "현재 대한민국 경기도 수원시에 지진이 발생했습니다. 지진이 멈추기 전에 사람들에게 행동 요령을 알려주세요."})
-        result = streaming_chat(messages)
-        messages.append({"role": "assistant", "content": result})
         gamji_earth_quake(0, True)
     else:
         map_path = find_optimal_path(map_data, map_size)
@@ -581,6 +386,4 @@ def earth_quake(map_data, map_size, before_gamjied):
 # 메인 실행 코드
 if __name__ == "__main__":
     print("메인 루프 실행")
-    while True:
-        gamji_earth_quake(0, False)
-        time.sleep(0.5)
+    map_path = find_optimal_path(map_data, map_size)

@@ -62,7 +62,7 @@ def right_turn(x):  # 오른쪽으로 x도 회전
         
         # 각도 차이가 180도를 초과하면 반대방향으로 회전하는 방식도 고려
         if angle_diff > 180:
-            angle_diff -= 360  # 반대방향으로 회전하도록 변경
+            angle_diff = abs(angle_diff-360)  # 반대방향으로 회전하도록 변경
         
         # 디버깅용 출력
         # print(f"현재 각도: {current_angle}, 목표 각도와의 차이: {angle_diff}")
@@ -78,9 +78,9 @@ def right_turn(x):  # 오른쪽으로 x도 회전
         elif abs(angle_diff) > 50:
             motor_speed = 40  # 각도 차이가 중간이면 중간 속도로 회전
         elif abs(angle_diff) > 10:
-            motor_speed = 30  # 각도 차이가 작으면 느리게 회전
+            motor_speed = 25  # 각도 차이가 작으면 느리게 회전
         else:
-            motor_speed = 18  # 각도 차이가 매우 작으면 더 천천히 회전
+            motor_speed = 14  # 각도 차이가 매우 작으면 더 천천히 회전
 
         # 오른쪽 회전 모터 설정 (시계방향 회전)
         motor1.set_speed(motor_speed)
@@ -111,7 +111,7 @@ def left_turn(x):  # 왼쪽으로 x도 회전
         
         # 각도 차이가 180도를 초과하면 반대방향으로 회전하는 방식도 고려
         if angle_diff > 180:
-            angle_diff -= 360  # 반대방향으로 회전하도록 변경
+            angle_diff = abs(angle_diff-360)  # 반대방향으로 회전하도록 변경
         
         # 디버깅용 출력
         # print(f"현재 각도: {current_angle}, 목표 각도와의 차이: {angle_diff}")
@@ -127,9 +127,9 @@ def left_turn(x):  # 왼쪽으로 x도 회전
         elif abs(angle_diff) > 50:
             motor_speed = 40  # 각도 차이가 중간이면 중간 속도로 회전
         elif abs(angle_diff) > 10:
-            motor_speed = 30  # 각도 차이가 작으면 느리게 회전
+            motor_speed = 25  # 각도 차이가 작으면 느리게 회전
         else:
-            motor_speed = 18  # 각도 차이가 매우 작으면 더 천천히 회전
+            motor_speed = 14  # 각도 차이가 매우 작으면 더 천천히 회전
 
         # 왼쪽 회전 모터 설정 (반시계방향 회전)
         motor1.set_speed(-motor_speed)
@@ -150,3 +150,6 @@ def bbi_bbo():
     speaker1.set_tune(750, 100)
     speaker2.set_tune(750, 100)
     time.sleep(0.7)
+
+right_turn(90)
+right_turn(270)
